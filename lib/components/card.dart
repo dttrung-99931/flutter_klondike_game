@@ -2,12 +2,15 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';
+import 'package:klondike_flutter_game/components/pipe.dart';
 import 'package:klondike_flutter_game/components/rank.dart';
-import 'package:klondike_flutter_game/components/suite.dart';
+import 'package:klondike_flutter_game/components/suit.dart';
 import 'package:klondike_flutter_game/klondike_game.dart';
+import 'package:klondike_flutter_game/utils/extensions/list_ext.dart';
 import 'package:klondike_flutter_game/utils/utils.dart';
 
-class Card extends PositionComponent {
+class Card extends PositionComponent with DragCallbacks {
   Card({
     required int rankValue,
     required int suitValue,
@@ -43,6 +46,9 @@ class Card extends PositionComponent {
     ..paint = blueFilter;
   static final Sprite blackKing = klondikeSprite(1305, 532, 407, 549)
     ..paint = blueFilter;
+  static final Sprite redJack = klondikeSprite(81, 565, 562, 488);
+  static final Sprite redQueen = klondikeSprite(717, 541, 486, 515);
+  static final Sprite redKing = klondikeSprite(1305, 532, 407, 549);
 
   // Back
   static final Paint backBorderPaint1 = Paint()
@@ -59,6 +65,7 @@ class Card extends PositionComponent {
 
   final Rank rank;
   final Suit suit;
+  Pile? pipe;
   bool _faceUp;
   bool get faceUp => _faceUp;
 
@@ -68,6 +75,8 @@ class Card extends PositionComponent {
 
   Sprite get rankSprite => suit.isBlack ? rank.blackSprite : rank.redSprite;
   Sprite get suitSprite => suit.sprite;
+
+  bool get canMoveCard => pipe != null && pipe!.canMoveCard(this);
 
   @override
   String toString() {
@@ -150,13 +159,13 @@ class Card extends PositionComponent {
         _drawSprint(canvas, suitSprite, 0.3, 0.38, rotate: true);
         _drawSprint(canvas, suitSprite, 0.7, 0.38, rotate: true);
       case 11:
-        _drawSprint(canvas, suit.isBlack ? blackJack : suit.sprite, 0.5, 0.5);
+        _drawSprint(canvas, suit.isBlack ? blackJack : redJack, 0.5, 0.5);
         break;
       case 12:
-        _drawSprint(canvas, suit.isBlack ? blackQueen : suit.sprite, 0.5, 0.5);
+        _drawSprint(canvas, suit.isBlack ? blackQueen : redQueen, 0.5, 0.5);
         break;
       case 13:
-        _drawSprint(canvas, suit.isBlack ? blackKing : suit.sprite, 0.5, 0.5);
+        _drawSprint(canvas, suit.isBlack ? blackKing : redKing, 0.5, 0.5);
         break;
     }
   }
@@ -196,5 +205,48 @@ class Card extends PositionComponent {
     canvas.drawRRect(cardRrect, backBorderPaint1);
     canvas.drawRRect(cardRrect, backBorderPaint2);
     flameSprint.render(canvas, position: size / 2, anchor: Anchor.center);
+  }
+
+  bool isNextRankAndOppositeSuitOf(Card card) {
+    return rank.value == card.rank.value + 1 &&
+        suit.isBlack != card.suit.isBlack;
+  }
+
+  bool isNextRankAndMatchSuitOf(Card card) {
+    return rank.value == card.rank.value + 1 && suit.value == card.suit.value;
+  }
+
+  @override
+  void onDragStart(DragStartEvent event) {
+    if (canMoveCard) {
+      priority = 100;
+      super.onDragStart(event);
+    }
+  }
+
+  @override
+  void onDragUpdate(DragUpdateEvent event) {
+    if (isDragged) {
+      position += event.localDelta;
+    }
+  }
+
+  @override
+  void onDragEnd(DragEndEvent event) {
+    if (isDragged) {
+      super.onDragEnd(event);
+      final dropPiles = parent!
+          .componentsAtPoint(position + size / 2)
+          .whereType<Pile>()
+          .toList();
+      final Pile? destPile =
+          dropPiles.firstWhereOrNull((pile) => pile.canAcceptCard(this));
+      if (destPile != null) {
+        pipe?.removeCard(this);
+        destPile.addCard(this);
+      } else {
+        pipe?.returnCard(this);
+      }
+    }
   }
 }

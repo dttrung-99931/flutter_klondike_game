@@ -8,10 +8,10 @@ class Rank {
   Rank._(
     this.value,
     this.label,
-    double xBlack,
-    double yBlack,
     double xRed,
     double yRed,
+    double xBlack,
+    double yBlack,
     double width,
     double height,
   )   : blackSprite = klondikeSprite(xBlack, yBlack, width, height),
