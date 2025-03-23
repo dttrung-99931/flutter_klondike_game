@@ -26,7 +26,7 @@ class FoundationPile extends Pile {
     assert(card.isFaceUp);
     card.position = position;
     card.priority = _cards.length;
-    card.pipe = this;
+    card.pile = this;
     _cards.add(card);
   }
 

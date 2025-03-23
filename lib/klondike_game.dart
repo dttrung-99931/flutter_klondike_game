@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flame/components.dart';
 import 'package:flame/flame.dart';
 import 'package:flame/game.dart';
-import 'package:flutter/material.dart' hide Card;
 import 'package:klondike_flutter_game/components/card.dart';
 import 'package:klondike_flutter_game/components/foundation_pile.dart';
 import 'package:klondike_flutter_game/components/stock_pile.dart';
@@ -14,9 +13,11 @@ import 'package:klondike_flutter_game/constants/constants.dart';
 class KlondikeGame extends FlameGame {
   static const double cardWdith = 1000;
   static const double cardHeight = 1400;
-  static const double cardGap = 175;
+  static const double cardGap = 200;
   static const double cardRadius = 100;
   static final Vector2 cardSize = Vector2(cardWdith, cardHeight);
+  // Number of cards facing up at the waste pile
+  static const int drawCards = 1;
 
   // Called when flutter game instance attached to the widget tree for loading data
   @override
@@ -27,20 +28,18 @@ class KlondikeGame extends FlameGame {
 
     final stock = StockPile()
       ..size = cardSize
-      ..position = Vector2(cardGap, cardGap)
-      ..debugColor = Colors.green;
+      ..position = Vector2(cardGap, cardGap * 2);
 
     final waste = WastePile()
       ..size = cardSize
-      ..position = Vector2(cardWdith + cardGap * 2, cardGap)
-      ..debugColor = Colors.red;
+      ..position = Vector2(cardWdith + cardGap * 2, cardGap * 2);
 
     final foundations = List.generate(4, (index) {
       return FoundationPile(index)
         ..size = cardSize
         ..position = Vector2(
           (cardWdith + cardGap) * (3 + index),
-          cardGap,
+          cardGap * 2,
         );
     });
 
@@ -49,7 +48,7 @@ class KlondikeGame extends FlameGame {
         ..size = cardSize
         ..position = Vector2(
           cardGap / 2 + (cardGap + cardWdith) * index,
-          cardHeight * 3,
+          cardHeight * 2,
         );
     });
 

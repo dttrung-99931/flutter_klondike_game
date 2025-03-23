@@ -15,17 +15,14 @@ class TableauPile extends Pile {
     ..color = const Color(0x50ffffff);
 
   final List<Card> _cards = [];
+  final _bigFanOffset = Vector2(0, KlondikeGame.cardSize.y * 0.13);
   final _fanOffset = Vector2(0, KlondikeGame.cardSize.y * 0.05);
 
   @override
   void addCard(Card card) {
-    if (_cards.isEmpty) {
-      card.position = position;
-    } else {
-      card.position = _cards.last.position + _fanOffset;
-    }
+    card.position = _calcCardPosition(_cards.length);
     card.priority = _cards.length;
-    card.pipe = this;
+    card.pile = this;
     _cards.add(card);
   }
 
@@ -63,14 +60,25 @@ class TableauPile extends Pile {
     }
   }
 
+  Vector2 _calcCardPosition(int cardIndex) {
+    assert(cardIndex >= 0 && cardIndex <= _cards.length);
+    if (cardIndex == 0) {
+      return position;
+    }
+    var prevCard = _cards[cardIndex - 1];
+    Vector2 fanOffset = prevCard.isFaceUp ? _bigFanOffset : _fanOffset;
+    return prevCard.position + fanOffset;
+  }
+
   @override
   void returnCard(Card card) {
     final index = _cards.indexOf(card);
+    card.position = _calcCardPosition(index);
     card.priority = index;
-    if (index > 0) {
-      card.position = _cards[index - 1].position + _fanOffset;
-    } else {
-      card.position = position;
-    }
+  }
+
+  List<Card> getDraggingCards(Card draggedCard) {
+    final index = _cards.indexOf(draggedCard);
+    return _cards.sublist(index);
   }
 }

@@ -2,10 +2,13 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flame/components.dart';
+import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
+import 'package:flutter/material.dart';
 import 'package:klondike_flutter_game/components/pipe.dart';
 import 'package:klondike_flutter_game/components/rank.dart';
 import 'package:klondike_flutter_game/components/suit.dart';
+import 'package:klondike_flutter_game/components/tableau_pile.dart';
 import 'package:klondike_flutter_game/klondike_game.dart';
 import 'package:klondike_flutter_game/utils/extensions/list_ext.dart';
 import 'package:klondike_flutter_game/utils/utils.dart';
@@ -65,7 +68,7 @@ class Card extends PositionComponent with DragCallbacks {
 
   final Rank rank;
   final Suit suit;
-  Pile? pipe;
+  Pile? pile;
   bool _faceUp;
   bool get faceUp => _faceUp;
 
@@ -76,7 +79,7 @@ class Card extends PositionComponent with DragCallbacks {
   Sprite get rankSprite => suit.isBlack ? rank.blackSprite : rank.redSprite;
   Sprite get suitSprite => suit.sprite;
 
-  bool get canMoveCard => pipe != null && pipe!.canMoveCard(this);
+  List<Card> _draggingCards = [];
 
   @override
   String toString() {
@@ -218,16 +221,26 @@ class Card extends PositionComponent with DragCallbacks {
 
   @override
   void onDragStart(DragStartEvent event) {
-    if (canMoveCard) {
-      priority = 100;
+    if (pile != null && pile!.canMoveCard(this)) {
       super.onDragStart(event);
+      _whereCardStared = position.clone();
+      if (pile is TableauPile) {
+        _draggingCards = (pile as TableauPile).getDraggingCards(this);
+      } else {
+        _draggingCards = [this];
+      }
+      for (int i = 0; i < _draggingCards.length; i++) {
+        _draggingCards[i].priority = 100 + i;
+      }
     }
   }
 
   @override
   void onDragUpdate(DragUpdateEvent event) {
     if (isDragged) {
-      position += event.localDelta;
+      for (var card in _draggingCards) {
+        card.position += event.localDelta;
+      }
     }
   }
 
@@ -235,18 +248,59 @@ class Card extends PositionComponent with DragCallbacks {
   void onDragEnd(DragEndEvent event) {
     if (isDragged) {
       super.onDragEnd(event);
-      final dropPiles = parent!
-          .componentsAtPoint(position + size / 2)
-          .whereType<Pile>()
-          .toList();
+      final center = position + size / 2;
+      var dropPiles =
+          parent!.componentsAtPoint(center).whereType<Pile>().toList();
+      if (dropPiles.isEmpty) {
+        dropPiles = parent!
+            .componentsAtPoint(center)
+            .whereType<Card>()
+            .map((card) => card.pile!)
+            .toList();
+      }
       final Pile? destPile =
           dropPiles.firstWhereOrNull((pile) => pile.canAcceptCard(this));
       if (destPile != null) {
-        pipe?.removeCard(this);
+        pile?.removeCard(this);
         destPile.addCard(this);
       } else {
-        pipe?.returnCard(this);
+        for (var card in _draggingCards) {
+          final posOffset = card.position - position;
+          card.doMove(
+            to: _whereCardStared! + posOffset,
+            onComplete: () {
+              pile?.returnCard(card);
+            },
+          );
+        }
       }
+      _draggingCards = [];
     }
+  }
+
+  Vector2? _whereCardStared;
+
+  void doMove({
+    required Vector2 to,
+    double speed = 20,
+    double startDelaySecs = 0,
+    VoidCallback? onComplete,
+    Curve curve = Curves.easeOutQuad,
+  }) {
+    assert(speed > 0);
+    final dt = (to - position).length / (size.x * speed);
+    assert(dt > 0, 'Speed must be > 0');
+    priority = 100;
+    add(
+      MoveToEffect(
+        to,
+        EffectController(
+          duration: dt,
+          startDelay: startDelaySecs,
+          curve: curve,
+        ),
+        onComplete: onComplete,
+      ),
+    );
   }
 }
