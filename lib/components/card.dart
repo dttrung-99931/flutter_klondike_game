@@ -277,7 +277,9 @@ class Card extends PositionComponent
           dropPiles.firstWhereOrNull((pile) => pile.canAcceptCard(this));
       if (destPile != null) {
         pile?.removeCard(this);
-        destPile.addCard(this);
+        for (var card in _draggingCards) {
+          destPile.addCard(card);
+        }
       } else {
         for (var card in _draggingCards) {
           final posOffset = card.position - position;
@@ -380,7 +382,7 @@ class Card extends PositionComponent
         );
       }
     } else if (pile is StockPile) {
-      // Forward tap to stock pile 
+      // Forward tap to stock pile
       // because when implement Card.onTapUp, StockPile.onTapUp will not receied event
       (pile as StockPile).onTapUp(event);
     }

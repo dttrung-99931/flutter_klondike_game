@@ -5,8 +5,9 @@ import 'package:klondike_flutter_game/components/card.dart';
 import 'package:klondike_flutter_game/components/pipe.dart';
 import 'package:klondike_flutter_game/components/suit.dart';
 import 'package:klondike_flutter_game/klondike_game.dart';
+import 'package:klondike_flutter_game/klondike_world.dart';
 
-class FoundationPile extends Pile {
+class FoundationPile extends Pile with HasWorldReference<KlondikeWorld> {
   FoundationPile(int suitValue, {super.position})
       : suit = Suit.fromInt(suitValue),
         super(size: KlondikeGame.cardSize);
@@ -21,6 +22,8 @@ class FoundationPile extends Pile {
     ..color = suit.isRed ? const Color(0x3a000000) : const Color(0x64000000)
     ..blendMode = BlendMode.luminosity;
 
+  bool get isFull => _cards.length == 13;
+
   @override
   void addCard(Card card) {
     assert(card.isFaceUp);
@@ -28,6 +31,7 @@ class FoundationPile extends Pile {
     card.priority = _cards.length;
     card.pile = this;
     _cards.add(card);
+    world.checkWin();
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flame/flame.dart';
@@ -41,6 +42,8 @@ class KlondikeWorld extends World with HasGameReference<KlondikeGame> {
   final List<FoundationPile> foundations = [];
   final List<TableauPile> tableaus = [];
   final List<Card> cards = [];
+  final double moveSpeed = 25;
+  late Vector2 _playVisibleSize;
   Action? _action;
 
   @override
@@ -62,7 +65,9 @@ class KlondikeWorld extends World with HasGameReference<KlondikeGame> {
     addActionButton(
       action: Action.haveFun,
       x: right,
-      onPressed: () {},
+      onPressed: () {
+        celebrateWin();
+      },
     );
     addActionButton(
       action: Action.changeDraw,
@@ -100,7 +105,7 @@ class KlondikeWorld extends World with HasGameReference<KlondikeGame> {
         final card = cards[cardToDeal--];
         card.doMove(
           to: tableaus[j].position,
-          speed: 8,
+          speed: moveSpeed,
           startDelaySecs: delayedUnitSec * movingCards,
           onComplete: () {
             movingCards--;
@@ -182,12 +187,13 @@ class KlondikeWorld extends World with HasGameReference<KlondikeGame> {
 
   void _setupCamera() {
     final camera = game.camera;
-    camera.viewfinder.visibleGameSize = Vector2(
+    _playVisibleSize = Vector2(
       KlondikeGame.cardWdith * 7 + KlondikeGame.cardGap * 8,
       KlondikeGame.cardHeight * 4 + KlondikeGame.cardGap * 3,
     );
+    camera.viewfinder.visibleGameSize = _playVisibleSize;
     camera.viewfinder.position = Vector2(
-      camera.viewfinder.visibleGameSize!.x / 2,
+      _playVisibleSize.x / 2,
       0,
     );
     camera.viewfinder.anchor = Anchor.topCenter;
@@ -206,5 +212,96 @@ class KlondikeWorld extends World with HasGameReference<KlondikeGame> {
         size: Vector2(1000, 300),
       ),
     );
+  }
+
+  void checkWin() {
+    bool isWin = !foundations.any((foundation) => !foundation.isFull);
+    if (isWin) {
+      celebrateWin();
+    }
+  }
+
+  void celebrateWin() {
+    final center = game.camera.viewfinder.visibleGameSize! / 2;
+    for (int i = 0; i < cards.length; i++) {
+      final card = cards[i];
+      card.priority = i;
+      if (card.isFaceUp) {
+        card.flip();
+      }
+      card.doMove(
+        to: center,
+        startDelaySecs: 0.15 * i,
+        speed: moveSpeed,
+        onComplete: () {
+          if (card == cards.last) {
+            moveAllCardsArroundToSide(newGame);
+          }
+        },
+      );
+    }
+  }
+
+  void newGame() {
+    _action = Action.newDeal; // TODO iompl
+    game.world = KlondikeWorld();
+  }
+
+  void moveAllCardsArroundToSide(VoidCallback onComplete) {
+    // game.size is size of game on physical device (unit pixcel )
+    // _playVisibleSize is logical size of the game
+    // zoomedSize is logical size of the zoomed area displaying on the device screen
+    final zoomedSize = game.size / game.camera.viewfinder.zoom;
+    double offscreenWidth = zoomedSize.x + KlondikeGame.cardWdith;
+    double offscreenHeight = zoomedSize.x + KlondikeGame.cardHeight;
+    final topLeft = Vector2(
+      (_playVisibleSize.x - zoomedSize.x) / 2 - KlondikeGame.cardWdith,
+      -KlondikeGame.cardHeight,
+    );
+    int side = 0; // top: 0, right: 1, ...
+    List<Vector2> cornors = [
+      topLeft, // top left
+      topLeft + Vector2(offscreenWidth, 0), // top right
+      topLeft + Vector2(offscreenWidth, offscreenHeight), // bttom right
+      topLeft + Vector2(0, offscreenHeight), // top right
+    ];
+    int cardNum = cards.length;
+    double c = (offscreenWidth + offscreenHeight) * 2;
+    double space = c / cardNum;
+    List<Vector2> offsets = [
+      Vector2(space, 0), // top left
+      Vector2(0, space), // top right
+      Vector2(-space, 0), // bottom right
+      Vector2(0, -space), // bottom leftt
+    ];
+    int i = 0;
+    Vector2 pos = cornors[side];
+    while (i < cards.length) {
+      Vector2 offset = offsets[side];
+      pos = pos + offset;
+      final card = cards[i];
+      card.doMove(
+        to: pos,
+        startDelaySecs: 0.15 * i,
+        speed: 10,
+        onComplete: () {
+          if (card == cards.last) {
+            onComplete();
+          }
+        },
+      );
+
+      final nextCornor = cornors[(side + 1) % cornors.length];
+      if ((side == 0 && pos.x >= nextCornor.x) ||
+          (side == 1 && pos.y >= nextCornor.y) ||
+          (side == 2 && pos.x <= nextCornor.x) ||
+          (side == 3 && pos.y <= nextCornor.y)) {
+        // make sure if erorr, side don't go out of index
+        side = (side + 1) % cornors.length;
+        pos = nextCornor;
+      }
+
+      i++;
+    }
   }
 }
