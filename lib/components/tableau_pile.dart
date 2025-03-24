@@ -31,9 +31,9 @@ class TableauPile extends Pile {
     canvas.drawRRect(Card.cardRrect, _borderPaint);
   }
 
-  void flipTopCard() {
+  void flipTopCard({double deplayedSecs = 0}) {
     if (_cards.isNotEmpty) {
-      _cards.last.flip();
+      _cards.last.turnFaceUp(start: deplayedSecs);
     }
   }
 
@@ -58,6 +58,7 @@ class TableauPile extends Pile {
     if (_cards.isNotEmpty && !_cards.last.isFaceUp) {
       flipTopCard();
     }
+    card.pile = null;
   }
 
   Vector2 _calcCardPosition(int cardIndex) {

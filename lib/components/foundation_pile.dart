@@ -7,7 +7,7 @@ import 'package:klondike_flutter_game/components/suit.dart';
 import 'package:klondike_flutter_game/klondike_game.dart';
 
 class FoundationPile extends Pile {
-  FoundationPile(int suitValue)
+  FoundationPile(int suitValue, {super.position})
       : suit = Suit.fromInt(suitValue),
         super(size: KlondikeGame.cardSize);
 
@@ -59,6 +59,7 @@ class FoundationPile extends Pile {
   void removeCard(Card card) {
     assert(canMoveCard(card));
     _cards.removeLast();
+    card.pile = null;
   }
 
   @override

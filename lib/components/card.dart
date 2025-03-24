@@ -1,22 +1,26 @@
 import 'dart:math';
-import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
+import 'package:klondike_flutter_game/components/foundation_pile.dart';
 import 'package:klondike_flutter_game/components/pipe.dart';
 import 'package:klondike_flutter_game/components/rank.dart';
+import 'package:klondike_flutter_game/components/stock_pile.dart';
 import 'package:klondike_flutter_game/components/suit.dart';
 import 'package:klondike_flutter_game/components/tableau_pile.dart';
 import 'package:klondike_flutter_game/klondike_game.dart';
+import 'package:klondike_flutter_game/klondike_world.dart';
 import 'package:klondike_flutter_game/utils/extensions/list_ext.dart';
 import 'package:klondike_flutter_game/utils/utils.dart';
 
-class Card extends PositionComponent with DragCallbacks {
+class Card extends PositionComponent
+    with DragCallbacks, TapCallbacks, HasWorldReference<KlondikeWorld> {
   Card({
     required int rankValue,
     required int suitValue,
+    super.position,
   })  : rank = Rank.fromInt(rankValue),
         suit = Suit.fromInt(suitValue),
         _faceUp = false,
@@ -69,12 +73,23 @@ class Card extends PositionComponent with DragCallbacks {
   final Rank rank;
   final Suit suit;
   Pile? pile;
-  bool _faceUp;
+  bool _faceUp = false;
+  bool _faceUpView = false;
+  bool _faceUpAnimated = false;
   bool get faceUp => _faceUp;
 
   bool get isFaceUp => _faceUp;
   bool get isFaceDown => !_faceUp;
-  void flip() => _faceUp = !_faceUp;
+
+  void flip() {
+    if (_faceUpAnimated) {
+      // Let the anim determine faceUp state
+      _faceUp = _faceUpView;
+    } else {
+      _faceUp = !_faceUp;
+      _faceUpView = _faceUp;
+    }
+  }
 
   Sprite get rankSprite => suit.isBlack ? rank.blackSprite : rank.redSprite;
   Sprite get suitSprite => suit.sprite;
@@ -89,7 +104,7 @@ class Card extends PositionComponent with DragCallbacks {
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    if (_faceUp) {
+    if (_faceUpView) {
       _renderFront(canvas);
     } else {
       _renderBack(canvas);
@@ -290,9 +305,8 @@ class Card extends PositionComponent with DragCallbacks {
     assert(speed > 0);
     final dt = (to - position).length / (size.x * speed);
     assert(dt > 0, 'Speed must be > 0');
-    priority = 100;
     add(
-      MoveToEffect(
+      MoveEffect(
         to,
         EffectController(
           duration: dt,
@@ -302,5 +316,89 @@ class Card extends PositionComponent with DragCallbacks {
         onComplete: onComplete,
       ),
     );
+  }
+
+  void moveToAndTurnFaceUp({
+    required Vector2 to,
+    VoidCallback? onComplete,
+  }) {
+    doMove(
+      to: to,
+      speed: 10,
+      onComplete: () {
+        turnFaceUp(
+          onComplete: onComplete,
+        );
+      },
+    );
+  }
+
+  void turnFaceUp({
+    double timeInSecs = 0.5,
+    double start = 0.0,
+    VoidCallback? onComplete,
+  }) {
+    assert(timeInSecs > 0);
+    position = position + Vector2(size.x / 2, 0);
+    anchor = Anchor.topCenter;
+    _faceUpAnimated = true;
+    add(
+      ScaleEffect.to(
+        Vector2(scale.x / 100, scale.y),
+        EffectController(
+          duration: timeInSecs / 2,
+          reverseDuration: timeInSecs / 2,
+          startDelay: start,
+          curve: Curves.easeOutSine,
+          onMin: () {
+            position = position - Vector2(size.x / 2, 0);
+            _faceUp = true;
+            anchor = Anchor.topLeft;
+          },
+          onMax: () {
+            _faceUpView = true;
+            _faceUpAnimated = false;
+          },
+        ),
+        onComplete: onComplete,
+      ),
+    );
+  }
+
+  @override
+  void onTapUp(TapUpEvent event) {
+    if (isFaceUp) {
+      final foundation = world.foundations
+          .firstWhereOrNull((FoundationPile pile) => pile.canAcceptCard(this));
+      if (foundation != null) {
+        doMove(
+          to: foundation.position,
+          onComplete: () {
+            pile?.removeCard(this);
+            foundation.addCard(this);
+          },
+        );
+      }
+    } else if (pile is StockPile) {
+      // Forward tap to stock pile 
+      // because when implement Card.onTapUp, StockPile.onTapUp will not receied event
+      (pile as StockPile).onTapUp(event);
+    }
+  }
+}
+
+class MoveEffect extends MoveToEffect {
+  MoveEffect(
+    super.destination,
+    super.controller, {
+    this.transmitPriority = 100,
+    super.onComplete,
+  });
+  final int transmitPriority;
+
+  @override
+  void onStart() {
+    super.onStart(); // // Flame connects MoveToEffect to EffectController.
+    parent?.priority = transmitPriority;
   }
 }

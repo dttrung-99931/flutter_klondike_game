@@ -4,6 +4,8 @@ import 'package:klondike_flutter_game/components/pipe.dart';
 import 'package:klondike_flutter_game/klondike_game.dart';
 
 class WastePile extends Pile {
+  WastePile({super.position}) : super(size: KlondikeGame.cardSize);
+
   final Vector2 _fanOffset = Vector2(KlondikeGame.cardWdith * 0.01, 0);
   final Vector2 _bigFanOffset = Vector2(KlondikeGame.cardWdith * 0.18, 0);
   final List<Card> _cards = [];
@@ -11,7 +13,6 @@ class WastePile extends Pile {
 
   @override
   void addCard(Card card) {
-    assert(card.isFaceUp);
     card.position = position;
     card.priority = _cards.length;
     _cards.add(card);
