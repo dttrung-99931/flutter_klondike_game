@@ -8,6 +8,7 @@ class FlatButton extends ButtonComponent {
     super.size,
     super.onReleased,
     super.position,
+    Anchor anchor = Anchor.center,
   }) : super(
           button: ButtonBackground(const Color(0xffece8a3)),
           buttonDown: ButtonBackground(Colors.red),
@@ -24,7 +25,7 @@ class FlatButton extends ButtonComponent {
               anchor: Anchor.center,
             )
           ],
-          anchor: Anchor.center,
+          anchor: anchor,
         );
 }
 

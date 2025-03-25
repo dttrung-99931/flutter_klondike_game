@@ -61,7 +61,11 @@ class KlondikeWorld extends World with HasGameReference<KlondikeGame> {
 
   void _addActionButtons() {
     final space = 1200;
-    final right = game.camera.viewfinder.visibleGameSize!.x;
+    final zoomedSize = game.size / game.camera.viewfinder.zoom;
+    final right = (_playVisibleSize - zoomedSize).x +
+        zoomedSize.x -
+        space -
+        KlondikeGame.cardGap;
     addActionButton(
       action: Action.haveFun,
       x: right,
@@ -98,7 +102,7 @@ class KlondikeWorld extends World with HasGameReference<KlondikeGame> {
   void dealCards() {
     assert(cards.length == 52, 'There must be 52 cands');
 
-    cards.shuffle();
+    cards.shuffle(game.radom);
 
     for (int i = 0; i < cards.length; i++) {
       cards[i].priority = i;
@@ -217,6 +221,7 @@ class KlondikeWorld extends World with HasGameReference<KlondikeGame> {
         onReleased: onPressed,
         position: Vector2(x, KlondikeGame.cardGap * 1.5),
         size: Vector2(1000, 300),
+        anchor: Anchor.centerLeft,
       ),
     );
   }
@@ -239,7 +244,7 @@ class KlondikeWorld extends World with HasGameReference<KlondikeGame> {
       card.doMove(
         to: center,
         startDelaySecs: 0.15 * i,
-        speed: moveSpeed,
+        speed: moveSpeed * 1.5,
         onComplete: () {
           if (card == cards.last) {
             moveAllCardsArroundToSide(game.restart);
@@ -285,7 +290,7 @@ class KlondikeWorld extends World with HasGameReference<KlondikeGame> {
       card.doMove(
         to: pos,
         startDelaySecs: 0.15 * i,
-        speed: 10,
+        speed: moveSpeed * 1.5,
         onComplete: () {
           if (card == cards.last) {
             onComplete();
