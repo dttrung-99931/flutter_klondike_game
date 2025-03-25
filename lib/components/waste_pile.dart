@@ -3,7 +3,7 @@ import 'package:klondike_flutter_game/components/card.dart';
 import 'package:klondike_flutter_game/components/pipe.dart';
 import 'package:klondike_flutter_game/klondike_game.dart';
 
-class WastePile extends Pile {
+class WastePile extends Pile with HasGameReference<KlondikeGame> {
   WastePile({super.position}) : super(size: KlondikeGame.cardSize);
 
   final Vector2 _fanOffset = Vector2(KlondikeGame.cardWdith * 0.01, 0);
@@ -29,7 +29,7 @@ class WastePile extends Pile {
 
   Vector2 _getFanOffset(int index) {
     final bigFanOut =
-        index != 0 && index >= _cards.length - KlondikeGame.drawCards + 1;
+        index != 0 && index >= _cards.length - game.cardNumTakeFromStock + 1;
     return bigFanOut ? _bigFanOffset : _fanOffset;
   }
 

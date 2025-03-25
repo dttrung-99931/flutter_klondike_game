@@ -1,12 +1,13 @@
 import 'dart:ui';
 
+import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:klondike_flutter_game/components/card.dart';
 import 'package:klondike_flutter_game/components/pipe.dart';
 import 'package:klondike_flutter_game/components/waste_pile.dart';
 import 'package:klondike_flutter_game/klondike_game.dart';
 
-class StockPile extends Pile with TapCallbacks {
+class StockPile extends Pile with TapCallbacks, HasGameReference<KlondikeGame> {
   StockPile({super.position}) : super(size: KlondikeGame.cardSize);
 
   final List<Card> _cards = [];
@@ -44,7 +45,7 @@ class StockPile extends Pile with TapCallbacks {
     }
 
     // Move cards from stock pile to waste pile
-    for (int i = 0; i < KlondikeGame.drawCards; i++) {
+    for (int i = 0; i < game.cardNumTakeFromStock; i++) {
       final wasteCard = _cards.removeLast();
       wasteCard.moveToAndTurnFaceUp(
         to: wastePile.position,

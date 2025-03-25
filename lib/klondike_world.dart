@@ -33,6 +33,7 @@ enum Action {
 }
 
 class KlondikeWorld extends World with HasGameReference<KlondikeGame> {
+  KlondikeWorld({cardNumTakeFromStock});
   final stock = StockPile(
     position: Vector2.zero(),
   );
@@ -44,7 +45,6 @@ class KlondikeWorld extends World with HasGameReference<KlondikeGame> {
   final List<Card> cards = [];
   final double moveSpeed = 25;
   late Vector2 _playVisibleSize;
-  Action? _action;
 
   @override
   Future<void> onLoad() async {
@@ -72,19 +72,26 @@ class KlondikeWorld extends World with HasGameReference<KlondikeGame> {
     addActionButton(
       action: Action.changeDraw,
       x: right - space,
-      onPressed: () {},
+      onPressed: () {
+        game.restart(
+          // Switch btw 3 <-> 1
+          cardNumTakeFromStock: 4 - game.cardNumTakeFromStock,
+        );
+      },
     );
     addActionButton(
       action: Action.sameDeal,
       x: right - 2 * space,
       onPressed: () {
-        dealCards();
+        game.restart();
       },
     );
     addActionButton(
       action: Action.newDeal,
       x: right - 3 * space,
-      onPressed: () {},
+      onPressed: () {
+        game.restart(changeRandom: true);
+      },
     );
   }
 
@@ -235,16 +242,11 @@ class KlondikeWorld extends World with HasGameReference<KlondikeGame> {
         speed: moveSpeed,
         onComplete: () {
           if (card == cards.last) {
-            moveAllCardsArroundToSide(newGame);
+            moveAllCardsArroundToSide(game.restart);
           }
         },
       );
     }
-  }
-
-  void newGame() {
-    _action = Action.newDeal; // TODO iompl
-    game.world = KlondikeWorld();
   }
 
   void moveAllCardsArroundToSide(VoidCallback onComplete) {
